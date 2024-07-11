@@ -1,11 +1,17 @@
-package gocroot
+package main
 
 import (
-	"github.com/gocroot/route"
+	"net/http"
+	"os"
 
-	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	"github.com/gocroot/route"
 )
 
-func init() {
-	functions.HTTP("WebHook", route.URL)
+func main() {
+	http.HandleFunc("/", route.URL)
+	port := os.Getenv("FUNCTIONS_CUSTOMHANDLER_PORT")
+	if port == "" {
+		port = "8080"
+	}
+	http.ListenAndServe(":"+port, nil)
 }

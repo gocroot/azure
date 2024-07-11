@@ -1,4 +1,4 @@
-name: Google Cloud Function Deployment
+name: Deploy Azure Function
 on:
   push:
     branches:
@@ -10,23 +10,18 @@ jobs:
       steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: GCP Authentication
-        id: 'auth'
-        uses: 'google-github-actions/auth@v2'
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
-      - name: Debug GCP credentials
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          go-version: '1.22.x'
+      - name: Install Azure CLI
         run: |
-          echo "$GOOGLE_APPLICATION_CREDENTIALS" > credentials.json
-      - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v2'
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash    
+      - name: Login to Azure
+        uses: azure/login@v1
         with:
-          version: '>= 363.0.0'
-      - name: 'Use gcloud CLI'
-        run: 'gcloud info' 
-      - name: 'Deploy a gen 2 cloud function'
-        run: 'gcloud functions deploy gocroot --gen2 --runtime=go122 --region=asia-southeast1 --trigger-http --entry-point=WebHook --allow-unauthenticated --set-env-vars MONGOSTRING=${{ secrets.MONGOSTRING }},WAQRKEYWORD=${{ secrets.WAQRKEYWORD }},WEBHOOKURL=${{ secrets.WEBHOOKURL }},WEBHOOKSECRET=${{ secrets.WEBHOOKSECRET }},WAPHONENUMBER=${{ secrets.WAPHONENUMBER }}'
-      - name: 'Cleaning Artifact Registry'
-        run: 'gcloud artifacts repositories delete gcf-artifacts --location=asia-southeast1 --quiet'
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Deploy to Azure Functions
+        run: |
+          func azure functionapp publish gocroot
+          

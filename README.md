@@ -42,80 +42,112 @@ This boilerplate has several folders with different functions, such as:
 * helper: helper folder with a list of functions only called by others file
 * route: all routes URL
 
-## GCP Cloud Function CI/CD setup
+## Deploy Azure Function
 
-To get an auth in Google Cloud, you can do the following:
+Untuk melakukan deploy Azure Function menggunakan Golang dan GitHub Actions, Anda bisa mengikuti langkah-langkah berikut:
 
-1. Open Cloud Shell Terminal, type this command line per line:  
-   
-   ![image](https://github.com/gocroot/gcp/assets/11188109/14f8e9d7-f74c-4f74-ab9c-72731a3e5f13)  
+### Persiapan Proyek
 
-   ```sh
-   # Get a List of Project IDs in Your GCP Account
-   gcloud projects list --format="value(projectId)"
-   # Set Project ID Variable
-   PROJECT_ID=yourprojectid
-   # Create a service account
-   gcloud iam service-accounts create "whatsauth" --project "${PROJECT_ID}"
-   # Create JSON key for GOOGLE_CREDENTIALS variable in GitHub repo
-   gcloud iam service-accounts keys create "key.json" --iam-account "whatsauth@${PROJECT_ID}.iam.gserviceaccount.com"
-   # Read the key JSON file and copy the output, including the curl bracket, go to step 5.
-   cat key.json
-   # Authorize service account to act as admin in Cloud Run service
-   gcloud projects add-iam-policy-binding ${PROJECT_ID} --member=serviceAccount:whatsauth@${PROJECT_ID}.iam.gserviceaccount.com --role=roles/run.admin
-   # Authorize service account to delete artifact registry
-   gcloud projects add-iam-policy-binding ${PROJECT_ID} --member=serviceAccount:whatsauth@${PROJECT_ID}.iam.gserviceaccount.com --role=roles/artifactregistry.admin
-   # Authorize service account to deploy cloud function
-   gcloud projects add-iam-policy-binding ${PROJECT_ID} --member=serviceAccount:whatsauth@${PROJECT_ID}.iam.gserviceaccount.com --role=roles/cloudfunctions.developer
-   ```
+1. **Buat Proyek Azure Function:**
+   Pastikan Anda sudah mengikuti langkah-langkah di atas untuk membuat proyek Azure Function dengan Golang.
 
-3. Open Menu Cloud Build>settings, select the Service Account created by step 1, and enable Cloud Function Developer.  
-   ![image](https://github.com/gocroot/gcp/assets/11188109/3ebc81b6-18b7-4d44-90b4-0abf67f82d66)  
-   ![image](https://github.com/gocroot/gcp/assets/11188109/d2628542-99a6-44ce-ba78-798c249e0f22)  
-5. Go to the GitHub repository; in the settings, menu>secrets>action, add GOOGLE_CREDENTIALS vars with the value from the key.json file.
-6. Add other Vars into the secret>action menu:  
+2. **Inisialisasi Git:**
+   Inisialisasi repository Git di folder proyek Anda:
 
    ```sh
-   MONGOSTRING=mongodb+srv://user:pass@gocroot.wedrfs.mongodb.net/
-   WAQRKEYWORD=yourkeyword
-   WEBHOOKURL=https://asia-southeast1-PROJECT_ID.cloudfunctions.net/gocroot/webhook/inbox
-   WEBHOOKSECRET=yoursecret
-   WAPHONENUMBER=62811111
+   git init
    ```
-7. Rename gcf.yml into main.yml to activate Github Action
 
-## WhatsAuth Signup
+3. **Buat Repository di GitHub:**
+   Buat repository baru di GitHub dan hubungkan ke repository lokal Anda:
 
-1. Go to the [WhatsAuth signup page](https://wa.my.id/) and scan with your WhatsApp camera menu for login.
-2. Input the webhook URL(<https://yourappname.alwaysdata.net/whatsauth/webhook>) and your secret from the WEBHOOKSECRET setting environment on Always Data.  
-   ![image](https://github.com/gocroot/alwaysdata/assets/11188109/e0b5cb9d-e9b3-4d04-bbd5-b03bd12293da)  
-3. Follow [this instruction](https://whatsauth.my.id/docs/), at the end of the instruction, you will get 30 days token using [this request](https://wa.my.id/apidocs/#/signup/signUpNewUser)
-4. Save the token into MongoDB, open iteung db, and insert this JSON document with your 30-day token and WhatsApp number.  
-   ![image](https://github.com/gocroot/alwaysdata/assets/11188109/829ae88a-be59-46f2-bddc-93482d0a4999)  
-   ```json
-   {
-     "token":"v4.public.asoiduasoijfiun98erjg98egjpoikr",
-     "phonenumber":"6281111222333"
-   }
+   ```sh
+   git remote add origin https://github.com/username/repository.git
    ```
-   ![image](https://github.com/gocroot/alwaysdata/assets/11188109/06330754-9167-4bf4-a214-5d75dab7c60a)  
 
-## Refresh Whatsapp API Token
+### Membuat Workflow GitHub Actions
 
-To continue using the WhatsAuth service, we must obtain a new token every three weeks before it expires in 30 days.
+1. **Buat Folder Workflow:**
+   Buat folder `.github/workflows` di dalam root proyek Anda.
 
-1. Open Menu Cloud Scheduler. You can just search it like the screenshot.  
-   ![image](https://github.com/gocroot/gcp/assets/11188109/58e3f419-123b-4a69-89d2-9a1d3adb1b76)  
-2. Click Create Job Input every 29 days; next, choose Target type HTTP, input refresh token URL from cloud function, HTTP method Get.  
-   ![image](https://github.com/gocroot/gcp/assets/11188109/a9ee6af9-f8b6-404c-8a60-4c3df63b534e)  
-   ![image](https://github.com/gocroot/gcp/assets/11188109/9b7d3f80-b264-4690-8776-9a8158a5f29c)    
-3. Completing create schedule
+2. **Buat File Workflow:**
+   Buat file baru di dalam folder `.github/workflows` dengan nama `deploy.yml` dan tambahkan konfigurasi berikut:
 
-## Upgrade Apps
+   ```yaml
+   name: Deploy Azure Function
 
-If you want to upgrade apps, please delete (go.mod) and (go.sum) files first, then type the command in your terminal or cmd :
+   on:
+     push:
+       branches:
+         - main
 
-```sh
-go mod init gocroot
-go mod tidy
-```
+   jobs:
+     build-and-deploy:
+       runs-on: ubuntu-latest
+
+       steps:
+       - name: Checkout code
+         uses: actions/checkout@v2
+
+       - name: Set up Go
+         uses: actions/setup-go@v2
+         with:
+           go-version: '1.16'
+
+       - name: Install Azure CLI
+         run: |
+           curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+       - name: Login to Azure
+         uses: azure/login@v1
+         with:
+           creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+       - name: Deploy to Azure Functions
+         run: |
+           func azure functionapp publish <your_function_app_name>
+
+   ```
+
+### Menyiapkan Secrets di GitHub
+
+1. **Buat Service Principal:**
+   Buat Service Principal untuk otentikasi dengan Azure:
+
+   ```sh
+   az group list --output table
+   az account list --output table
+
+   az account set --subscription <your_subscription_id>
+
+   az ad sp create-for-rbac --name "myGitHubActionsServicePrincipal" --role contributor --scopes /subscriptions/<your_subscription_id>/resourceGroups/<your_resource_group> --sdk-auth
+   ```
+
+   Ini akan menghasilkan JSON output yang berisi kredensial yang diperlukan untuk login ke Azure.
+
+2. **Tambah Secrets di GitHub:**
+   Tambahkan kredensial yang dihasilkan ke secrets repository GitHub Anda:
+   * Buka repository Anda di GitHub.
+   * Pergi ke `Settings > Secrets > Actions`.
+   * Klik `New repository secret`.
+   * Nama secret adalah `AZURE_CREDENTIALS`.
+   * Isi nilai secret dengan JSON output dari langkah sebelumnya.
+
+### Menjalankan Workflow
+
+Sekarang, setiap kali Anda push ke branch `main`, GitHub Actions akan otomatis menjalankan workflow untuk build dan deploy Azure Function Anda.
+
+### Langkah-langkah Tambahan
+
+* **Commit dan Push Kode:**
+
+  ```sh
+  git add .
+  git commit -m "Initial commit"
+  git push origin main
+  ```
+
+* **Verifikasi Deployment:**
+  Setelah workflow berhasil dijalankan, Anda dapat memverifikasi deployment Anda dengan mengakses URL Azure Function yang telah Anda deploy.
+
+Dengan mengikuti langkah-langkah di atas, Anda dapat melakukan deploy Azure Function menggunakan Golang dan GitHub Actions secara otomatis setiap kali ada perubahan di branch `main`.
