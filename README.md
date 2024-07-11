@@ -118,7 +118,13 @@ Untuk melakukan deploy Azure Function menggunakan Golang dan GitHub Actions, And
    az group list --output table
    az account list --output table
 
+   func init --worker-runtime custom
+   func new --template "HTTP trigger" --name gocroot
+
    az account set --subscription <your_subscription_id>
+
+   az functionapp config appsettings set --name <your_function_app_name> --resource-group <your_resource_group> --settings FUNCTIONS_WORKER_RUNTIME=custom
+
 
    az ad sp create-for-rbac --name "myGitHubActionsServicePrincipal" --role contributor --scopes /subscriptions/<your_subscription_id>/resourceGroups/<your_resource_group> --sdk-auth
    ```
