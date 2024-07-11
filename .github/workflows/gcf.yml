@@ -21,6 +21,9 @@ jobs:
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Set environment variables
+        run: |
+          echo "MONGOSTRING=${{ secrets.MONGOSTRING }}" >> $GITHUB_ENV
       - name: Deploy to Azure Functions
         run: |
           func azure functionapp publish gocroot
