@@ -29,5 +29,5 @@ jobs:
           echo "MONGOSTRING=${{ secrets.MONGOSTRING }}" >> $GITHUB_ENV
       - name: Deploy to Azure Functions
         run: |
-          func azure functionapp publish gocroot --force
+          func azure functionapp publish gocroot --custom --force
           
